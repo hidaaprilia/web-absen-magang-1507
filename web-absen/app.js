@@ -68,11 +68,7 @@
 
       el.targetCoordText.textContent =
         state.geofence.lat.toFixed(6) + ', ' + state.geofence.lng.toFixed(6);
-      SHARED.setBanner(
-        el.connectionBanner,
-        'ok',
-        'Terhubung ke Google Spreadsheet (1507_Presensi Magang). Waktu memakai server WIB.'
-      );
+      el.connectionBanner.classList.add('hidden');
       populateParticipantsDropdown();
       updateClock();
       updateEstimatedStatus();

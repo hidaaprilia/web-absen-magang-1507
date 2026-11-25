@@ -74,11 +74,7 @@
       if (!data.ok) throw new Error(data.error || 'Gagal terhubung ke server.');
       state.demoMode = false;
       clock.syncFromServer(data.serverTimestampMs);
-      SHARED.setBanner(
-        el.connectionBanner,
-        'ok',
-        'Terhubung ke Google Spreadsheet (1507_Presensi Magang). Waktu memakai server WIB.'
-      );
+      el.connectionBanner.classList.add('hidden');
       updateClock();
     } catch (err) {
       state.demoMode = true;
