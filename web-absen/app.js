@@ -6,10 +6,15 @@
   var SHARED = window.AbsenShared;
 
   var clock = SHARED.createClockSync();
+  var STORAGE_INSTALL_DISMISSED = 'absen1507_install_dismissed';
+  var urlParams = new URLSearchParams(window.location.search);
+  var requestedJenisParam = urlParams.get('jenis');
+  var hasShortcutJenis = requestedJenisParam === 'Masuk' || requestedJenisParam === 'Pulang';
 
   var state = {
     apiUrl: SHARED.getApiUrl(),
     demoMode: false,
+    deferredInstallPrompt: null,
     geofence: {
       lat: CFG.TARGET_LAT,
       lng: CFG.TARGET_LNG,
@@ -28,6 +33,11 @@
     serverDate: document.getElementById('serverDate'),
     clockSource: document.getElementById('clockSource'),
     connectionBanner: document.getElementById('connectionBanner'),
+    installBar: document.getElementById('installBar'),
+    installDesc: document.getElementById('installDesc'),
+    installAppBtn: document.getElementById('installAppBtn'),
+    dismissInstallBtn: document.getElementById('dismissInstallBtn'),
+    installGuideBox: document.getElementById('installGuideBox'),
     distanceDisplay: document.getElementById('distanceDisplay'),
     distanceBar: document.getElementById('distanceBar'),
     gpsStatusBadge: document.getElementById('gpsStatusBadge'),
@@ -154,10 +164,12 @@
       '<div>Pulang hari ini: <strong>' + SHARED.escapeHtml(pulangInfo) + '</strong></div>';
     el.participantInfoBox.classList.remove('hidden');
 
-    if (sum.masuk && !sum.pulang) {
-      setSelectedJenis('Pulang');
-    } else if (!sum.masuk) {
-      setSelectedJenis('Masuk');
+    if (!hasShortcutJenis) {
+      if (sum.masuk && !sum.pulang) {
+        setSelectedJenis('Pulang');
+      } else if (!sum.masuk) {
+        setSelectedJenis('Masuk');
+      }
     }
     updateSubmitButton();
   }
@@ -469,6 +481,86 @@
     return { ok: true, record: record };
   }
 
+  function setupPwaInstallAndShortcuts() {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(function () {});
+    }
+
+    if (hasShortcutJenis) {
+      setSelectedJenis(requestedJenisParam);
+    }
+
+    var isStandalone =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      window.navigator.standalone === true;
+    var dismissed = localStorage.getItem(STORAGE_INSTALL_DISMISSED) === '1';
+    if (isStandalone || dismissed) return;
+
+    var ua = navigator.userAgent || '';
+    var isIos = /iPhone|iPad|iPod/i.test(ua);
+    var isAndroid = /Android/i.test(ua);
+
+    if (isIos) {
+      el.installDesc.textContent =
+        'Di iPhone/iPad (Safari), tambahkan web ini sebagai pintasan aplikasi di Layar Utama.';
+      el.installAppBtn.textContent = 'Cara Buat Pintasan iOS';
+      el.installBar.classList.remove('hidden');
+    } else if (isAndroid) {
+      el.installDesc.textContent =
+        'Pasang ke layar utama Android untuk akses cepat dan pintasan Absen Masuk/Pulang.';
+      el.installBar.classList.remove('hidden');
+    }
+
+    window.addEventListener('beforeinstallprompt', function (e) {
+      e.preventDefault();
+      state.deferredInstallPrompt = e;
+      el.installAppBtn.textContent = 'Pasang Aplikasi';
+      el.installGuideBox.classList.add('hidden');
+      el.installBar.classList.remove('hidden');
+    });
+
+    window.addEventListener('appinstalled', function () {
+      state.deferredInstallPrompt = null;
+      el.installBar.classList.add('hidden');
+    });
+
+    el.installAppBtn.addEventListener('click', async function () {
+      if (state.deferredInstallPrompt) {
+        state.deferredInstallPrompt.prompt();
+        var choice = await state.deferredInstallPrompt.userChoice;
+        state.deferredInstallPrompt = null;
+        if (choice && choice.outcome === 'accepted') {
+          el.installBar.classList.add('hidden');
+        }
+        return;
+      }
+
+      if (isIos) {
+        el.installGuideBox.innerHTML =
+          '<strong>Langkah di Safari iPhone/iPad:</strong>' +
+          '<ol>' +
+          '<li>Buka situs ini di <strong>Safari</strong>.</li>' +
+          '<li>Ketuk ikon <strong>Bagikan (Share ⬆︎)</strong> di bilah bawah/atas.</li>' +
+          '<li>Pilih <strong>Tambahkan ke Layar Utama (Add to Home Screen)</strong> → ketuk <strong>Tambah</strong>.</li>' +
+          '</ol>';
+      } else {
+        el.installGuideBox.innerHTML =
+          '<strong>Langkah di Android (Chrome / Edge):</strong>' +
+          '<ol>' +
+          '<li>Ketuk menu <strong>⋮</strong> di pojok kanan atas browser.</li>' +
+          '<li>Pilih <strong>Tambahkan ke layar utama</strong> atau <strong>Instal aplikasi</strong>.</li>' +
+          '<li>Setelah terpasang, tekan lama ikon aplikasi untuk pintasan cepat <strong>Absen Masuk</strong> atau <strong>Absen Pulang</strong>.</li>' +
+          '</ol>';
+      }
+      el.installGuideBox.classList.toggle('hidden');
+    });
+
+    el.dismissInstallBtn.addEventListener('click', function () {
+      localStorage.setItem(STORAGE_INSTALL_DISMISSED, '1');
+      el.installBar.classList.add('hidden');
+    });
+  }
+
   document.querySelectorAll('input[name="jenisAbsen"]').forEach(function (radio) {
     radio.addEventListener('change', function () {
       setSelectedJenis(radio.value);
@@ -485,6 +577,7 @@
     updateEstimatedStatus();
   }, 1000);
 
+  setupPwaInstallAndShortcuts();
   initApp();
   startGpsWatch();
 })();

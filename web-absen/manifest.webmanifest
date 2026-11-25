@@ -1,0 +1,60 @@
+{
+  "name": "Absensi Peserta Magang 1507",
+  "short_name": "Absen 1507",
+  "description": "Aplikasi presensi peserta magang dengan validasi lokasi 15 meter dan waktu server WIB.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f3f6fb",
+  "theme_color": "#1e3a8a",
+  "lang": "id",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Absen Masuk",
+      "short_name": "Masuk",
+      "description": "Buka form langsung pada mode Absen Masuk",
+      "url": "/?jenis=Masuk",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Absen Pulang",
+      "short_name": "Pulang",
+      "description": "Buka form langsung pada mode Absen Pulang",
+      "url": "/?jenis=Pulang",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ]
+}

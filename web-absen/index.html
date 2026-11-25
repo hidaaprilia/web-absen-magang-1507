@@ -3,6 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#1e3a8a" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Absen 1507" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
   <title>Absensi Peserta Magang 1507</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
@@ -21,6 +29,20 @@
     </header>
 
     <div id="connectionBanner" class="banner info hidden"></div>
+
+    <div id="installBar" class="install-bar hidden">
+      <div class="install-bar-content">
+        <div>
+          <strong>Pasang Aplikasi &amp; Pintasan Layar Utama</strong>
+          <div id="installDesc" class="install-desc">Akses presensi lebih cepat langsung dari layar utama HP Anda.</div>
+        </div>
+        <div class="install-actions">
+          <button type="button" class="btn btn-primary" id="installAppBtn">Pasang Pintasan</button>
+          <button type="button" class="btn btn-secondary" id="dismissInstallBtn">Tutup</button>
+        </div>
+      </div>
+      <div id="installGuideBox" class="install-guide hidden"></div>
+    </div>
 
     <section id="tabAbsen">
       <div class="grid-2">
