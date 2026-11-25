@@ -1,7 +1,7 @@
 window.ABSEN_CONFIG = {
   // Tempel URL Web App Google Apps Script setelah deploy di Spreadsheet 1507_Presensi Magang
   // Contoh: 'https://script.google.com/macros/s/AKfycb.../exec'
-  API_URL: '',
+  API_URL: 'https://script.google.com/macros/s/AKfycbzLqoKuaCKFc8WEkDVWrnngACt6n9TcFDFS87tkja3mFtYLe3vWBnKEkHGKrSp-XE0_/exec',
 
   TARGET_LAT: -0.8423974510439358,
   TARGET_LNG: 103.43806729772506,
