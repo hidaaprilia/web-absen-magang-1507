@@ -489,3 +489,14 @@ th {
   margin: 6px 0 0 18px;
   padding: 0;
 }
+
+.word-count {
+  margin-top: 6px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--danger-text);
+}
+
+.word-count.ok {
+  color: var(--ok-text);
+}

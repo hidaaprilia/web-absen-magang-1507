@@ -187,10 +187,17 @@
     };
   }
 
+  function countWords(text) {
+    var trimmed = String(text == null ? '' : text).trim();
+    if (!trimmed) return 0;
+    return trimmed.split(/\s+/).filter(Boolean).length;
+  }
+
   return {
     haversineMeters: haversineMeters,
     getWibDateParts: getWibDateParts,
     evaluateAttendanceTime: evaluateAttendanceTime,
-    analyzeGpsSamples: analyzeGpsSamples
+    analyzeGpsSamples: analyzeGpsSamples,
+    countWords: countWords
   };
 });

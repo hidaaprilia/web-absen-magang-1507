@@ -19,6 +19,7 @@ const TARGET_LAT = -0.8423974510439358;
 const TARGET_LNG = 103.43806729772506;
 const MAX_DISTANCE_METERS = 20;
 const MAX_GPS_ACCURACY_METERS = 50;
+const MIN_KEGIATAN_WORDS = 100;
 const DEFAULT_ADMIN_PIN = '15072026';
 
 const SHEET_PESERTA = 'Peserta';
@@ -251,8 +252,19 @@ function handleSubmitAttendance_(body) {
     if (jenisAbsen !== 'Masuk' && jenisAbsen !== 'Pulang') {
       return { ok: false, error: 'Jenis absen harus Masuk atau Pulang.' };
     }
-    if (jenisAbsen === 'Pulang' && (!kegiatan || kegiatan.length < 3)) {
-      return { ok: false, error: 'Isian kegiatan hari ini wajib diisi minimal 3 karakter saat absen pulang.' };
+    if (jenisAbsen === 'Pulang') {
+      const wordCount = kegiatan ? kegiatan.split(/\s+/).filter(Boolean).length : 0;
+      if (wordCount < MIN_KEGIATAN_WORDS) {
+        return {
+          ok: false,
+          error:
+            'Isian kegiatan hari ini wajib minimal ' +
+            MIN_KEGIATAN_WORDS +
+            ' kata saat absen pulang (saat ini: ' +
+            wordCount +
+            ' kata).'
+        };
+      }
     }
     const recordedKegiatan = jenisAbsen === 'Masuk' ? (kegiatan || '-') : kegiatan;
     if (!isFinite(lat) || !isFinite(lng) || !isFinite(accuracy)) {

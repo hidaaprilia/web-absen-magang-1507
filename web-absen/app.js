@@ -55,6 +55,7 @@
     estimatedStatusText: document.getElementById('estimatedStatusText'),
     kegiatanField: document.getElementById('kegiatanField'),
     kegiatanInput: document.getElementById('kegiatanInput'),
+    kegiatanWordCount: document.getElementById('kegiatanWordCount'),
     submitAbsenBtn: document.getElementById('submitAbsenBtn'),
     submitResultBox: document.getElementById('submitResultBox')
   };
@@ -365,10 +366,27 @@
     }
   }
 
+  function updateKegiatanWordCount() {
+    var minWords = CFG.MIN_KEGIATAN_WORDS || 100;
+    var count = LOGIC.countWords(el.kegiatanInput.value);
+    if (!el.kegiatanWordCount) return count;
+    if (count >= minWords) {
+      el.kegiatanWordCount.textContent = count + ' / ' + minWords + ' kata (memenuhi syarat)';
+      el.kegiatanWordCount.classList.add('ok');
+    } else {
+      el.kegiatanWordCount.textContent =
+        count + ' / ' + minWords + ' kata (kurang ' + (minWords - count) + ' kata)';
+      el.kegiatanWordCount.classList.remove('ok');
+    }
+    return count;
+  }
+
   function updateSubmitButton() {
     var hasParticipant = Boolean(el.participantSelect.value);
     var isPulang = getSelectedJenis() === 'Pulang';
-    var hasKegiatan = !isPulang || el.kegiatanInput.value.trim().length >= 3;
+    var minWords = CFG.MIN_KEGIATAN_WORDS || 100;
+    var wordCount = updateKegiatanWordCount();
+    var hasKegiatan = !isPulang || wordCount >= minWords;
     var hasEnoughSamples = state.gpsSamples.length >= CFG.REQUIRED_GPS_SAMPLES;
     var gpsValid = Boolean(state.gpsAnalysis && state.gpsAnalysis.valid);
     var insideRadius =
@@ -458,7 +476,11 @@
       state.geofence.lng
     );
     if (dist > state.geofence.maxDistanceMeters) {
-      return { ok: false, error: 'Di luar batas 15 meter.' };
+      return { ok: false, error: 'Di luar batas ' + state.geofence.maxDistanceMeters + ' meter.' };
+    }
+    var minWords = CFG.MIN_KEGIATAN_WORDS || 100;
+    if (payload.jenisAbsen === 'Pulang' && LOGIC.countWords(payload.kegiatan) < minWords) {
+      return { ok: false, error: 'Isian kegiatan hari ini minimal ' + minWords + ' kata.' };
     }
     var demo = SHARED.loadDemoData();
     var participant = demo.participants.find(function (p) { return p.id === payload.participantId; });
