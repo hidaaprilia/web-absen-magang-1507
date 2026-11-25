@@ -55,7 +55,7 @@
     estimatedStatusText: document.getElementById('estimatedStatusText'),
     kegiatanField: document.getElementById('kegiatanField'),
     kegiatanInput: document.getElementById('kegiatanInput'),
-    kegiatanWordCount: document.getElementById('kegiatanWordCount'),
+    kegiatanCharCount: document.getElementById('kegiatanCharCount'),
     submitAbsenBtn: document.getElementById('submitAbsenBtn'),
     submitResultBox: document.getElementById('submitResultBox')
   };
@@ -366,17 +366,17 @@
     }
   }
 
-  function updateKegiatanWordCount() {
-    var minWords = CFG.MIN_KEGIATAN_WORDS || 100;
-    var count = LOGIC.countWords(el.kegiatanInput.value);
-    if (!el.kegiatanWordCount) return count;
-    if (count >= minWords) {
-      el.kegiatanWordCount.textContent = count + ' / ' + minWords + ' kata (memenuhi syarat)';
-      el.kegiatanWordCount.classList.add('ok');
+  function updateKegiatanCharCount() {
+    var minChars = CFG.MIN_KEGIATAN_CHARS || 100;
+    var count = LOGIC.countChars(el.kegiatanInput.value);
+    if (!el.kegiatanCharCount) return count;
+    if (count >= minChars) {
+      el.kegiatanCharCount.textContent = count + ' / ' + minChars + ' huruf (memenuhi syarat)';
+      el.kegiatanCharCount.classList.add('ok');
     } else {
-      el.kegiatanWordCount.textContent =
-        count + ' / ' + minWords + ' kata (kurang ' + (minWords - count) + ' kata)';
-      el.kegiatanWordCount.classList.remove('ok');
+      el.kegiatanCharCount.textContent =
+        count + ' / ' + minChars + ' huruf (kurang ' + (minChars - count) + ' huruf)';
+      el.kegiatanCharCount.classList.remove('ok');
     }
     return count;
   }
@@ -384,9 +384,9 @@
   function updateSubmitButton() {
     var hasParticipant = Boolean(el.participantSelect.value);
     var isPulang = getSelectedJenis() === 'Pulang';
-    var minWords = CFG.MIN_KEGIATAN_WORDS || 100;
-    var wordCount = updateKegiatanWordCount();
-    var hasKegiatan = !isPulang || wordCount >= minWords;
+    var minChars = CFG.MIN_KEGIATAN_CHARS || 100;
+    var charCount = updateKegiatanCharCount();
+    var hasKegiatan = !isPulang || charCount >= minChars;
     var hasEnoughSamples = state.gpsSamples.length >= CFG.REQUIRED_GPS_SAMPLES;
     var gpsValid = Boolean(state.gpsAnalysis && state.gpsAnalysis.valid);
     var insideRadius =
@@ -478,9 +478,9 @@
     if (dist > state.geofence.maxDistanceMeters) {
       return { ok: false, error: 'Di luar batas ' + state.geofence.maxDistanceMeters + ' meter.' };
     }
-    var minWords = CFG.MIN_KEGIATAN_WORDS || 100;
-    if (payload.jenisAbsen === 'Pulang' && LOGIC.countWords(payload.kegiatan) < minWords) {
-      return { ok: false, error: 'Isian kegiatan hari ini minimal ' + minWords + ' kata.' };
+    var minChars = CFG.MIN_KEGIATAN_CHARS || 100;
+    if (payload.jenisAbsen === 'Pulang' && LOGIC.countChars(payload.kegiatan) < minChars) {
+      return { ok: false, error: 'Isian kegiatan hari ini minimal ' + minChars + ' huruf.' };
     }
     var demo = SHARED.loadDemoData();
     var participant = demo.participants.find(function (p) { return p.id === payload.participantId; });

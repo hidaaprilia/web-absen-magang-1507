@@ -8,7 +8,7 @@ window.ABSEN_CONFIG = {
   MAX_DISTANCE_METERS: 20,
   MAX_GPS_ACCURACY_METERS: 50,
   REQUIRED_GPS_SAMPLES: 3,
-  MIN_KEGIATAN_WORDS: 100,
+  MIN_KEGIATAN_CHARS: 100,
 
   // Data awal peserta (dipakai saat mode preview lokal sebelum Apps Script dihubungkan)
   DEFAULT_PARTICIPANTS: [

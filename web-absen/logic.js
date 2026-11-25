@@ -187,10 +187,8 @@
     };
   }
 
-  function countWords(text) {
-    var trimmed = String(text == null ? '' : text).trim();
-    if (!trimmed) return 0;
-    return trimmed.split(/\s+/).filter(Boolean).length;
+  function countChars(text) {
+    return String(text == null ? '' : text).replace(/\s+/g, '').length;
   }
 
   return {
@@ -198,6 +196,6 @@
     getWibDateParts: getWibDateParts,
     evaluateAttendanceTime: evaluateAttendanceTime,
     analyzeGpsSamples: analyzeGpsSamples,
-    countWords: countWords
+    countChars: countChars
   };
 });
