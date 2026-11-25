@@ -615,15 +615,7 @@ function evaluateAttendanceTime_(dateObj, jenisAbsen) {
 
   let statusKetepatan = '';
   if (jenisAbsen === 'Masuk') {
-    if (totalMinutes < 7 * 60 + 31) {
-      statusKetepatan = 'Tepat Waktu';
-    } else if (totalMinutes <= 8 * 60) {
-      statusKetepatan = 'Telat 1';
-    } else if (totalMinutes <= 12 * 60) {
-      statusKetepatan = 'Telat 2';
-    } else {
-      statusKetepatan = 'Telat 2 (Lewat 12:00)';
-    }
+    statusKetepatan = totalMinutes < 7 * 60 + 31 ? 'Tepat Waktu' : 'Telat';
   } else {
     if (isoDay >= 1 && isoDay <= 4) {
       statusKetepatan = totalMinutes < 16 * 60 ? 'Pulang Lebih Awal' : 'Pulang Tepat Waktu';

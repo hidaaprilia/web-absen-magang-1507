@@ -85,7 +85,7 @@
     if (status === 'Telat 1' || status === 'Perlu Cek') {
       return '<span class="badge badge-warn">' + escapeHtml(status) + '</span>';
     }
-    if (status.indexOf('Telat 2') === 0 || status === 'Pulang Lebih Awal') {
+    if (status === 'Telat' || status.indexOf('Telat 2') === 0 || status === 'Pulang Lebih Awal') {
       return '<span class="badge badge-danger">' + escapeHtml(status) + '</span>';
     }
     return '<span class="badge badge-neutral">' + escapeHtml(status) + '</span>';

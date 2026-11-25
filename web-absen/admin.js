@@ -15,7 +15,6 @@
   var el = {
     serverClock: document.getElementById('serverClock'),
     serverDate: document.getElementById('serverDate'),
-    clockSource: document.getElementById('clockSource'),
     connectionBanner: document.getElementById('connectionBanner'),
     adminLoginCard: document.getElementById('adminLoginCard'),
     adminLoginForm: document.getElementById('adminLoginForm'),
@@ -45,9 +44,6 @@
     var parts = clock.getWibParts();
     el.serverClock.textContent = parts.timeStr + ' WIB';
     el.serverDate.textContent = parts.hariNama + ', ' + parts.dateStr;
-    el.clockSource.textContent = clock.isSynced()
-      ? 'Sumber: Waktu Server Google'
-      : 'Sumber: Mode Preview Lokal';
     if (!el.filterDate.value) {
       el.filterDate.value = parts.dateStr;
     }
@@ -173,8 +169,7 @@
     var totalAktif = state.adminParticipants.filter(function (p) { return p.aktif !== false; }).length;
     var hadirCount = 0;
     var tepatCount = 0;
-    var telat1Count = 0;
-    var telat2Count = 0;
+    var telatCount = 0;
     var pulangAwalCount = 0;
     var gpsCekCount = 0;
 
@@ -182,8 +177,7 @@
       if (r.jenisAbsen === 'Masuk') {
         hadirCount++;
         if (r.statusKetepatan === 'Tepat Waktu') tepatCount++;
-        if (r.statusKetepatan === 'Telat 1') telat1Count++;
-        if (r.statusKetepatan.indexOf('Telat 2') === 0) telat2Count++;
+        if (r.statusKetepatan && r.statusKetepatan.indexOf('Telat') === 0) telatCount++;
       } else if (r.jenisAbsen === 'Pulang') {
         if (r.statusKetepatan === 'Pulang Lebih Awal') pulangAwalCount++;
       }
@@ -194,8 +188,7 @@
       statCardHtml('Peserta Aktif', totalAktif) +
       statCardHtml('Sudah Masuk', hadirCount) +
       statCardHtml('Tepat Waktu', tepatCount) +
-      statCardHtml('Telat 1', telat1Count) +
-      statCardHtml('Telat 2', telat2Count) +
+      statCardHtml('Telat', telatCount) +
       statCardHtml('Pulang Lebih Awal', pulangAwalCount) +
       statCardHtml('GPS Perlu Cek', gpsCekCount);
 

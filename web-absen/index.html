@@ -19,12 +19,10 @@
     <header class="header">
       <div>
         <h1>Presensi Peserta Magang 1507</h1>
-        <p>Validasi lokasi radius 20 meter &amp; waktu sistem server WIB (anti ubah jam perangkat)</p>
       </div>
       <div class="clock-box">
         <div class="clock-time" id="serverClock">--:--:--</div>
         <div class="clock-date" id="serverDate">Memuat tanggal WIB...</div>
-        <div class="clock-source" id="clockSource">Sinkronisasi waktu sistem...</div>
       </div>
     </header>
 
@@ -93,8 +91,7 @@
             <strong>Ketentuan Jam Absensi (WIB):</strong>
             <ul>
               <li><strong>Masuk &lt; 07:31:</strong> Tepat Waktu</li>
-              <li><strong>Masuk 07:31 – 08:00:</strong> Telat 1</li>
-              <li><strong>Masuk 08:01 – 12:00:</strong> Telat 2</li>
+              <li><strong>Masuk &ge; 07:31:</strong> Telat</li>
               <li><strong>Pulang Senin–Kamis &lt; 16:00:</strong> Pulang Lebih Awal</li>
               <li><strong>Pulang Jumat &lt; 16:30:</strong> Pulang Lebih Awal</li>
             </ul>

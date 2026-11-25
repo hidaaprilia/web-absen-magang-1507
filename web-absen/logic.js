@@ -75,16 +75,7 @@
     var isoDay = wibParts.isoDay;
 
     if (jenisAbsen === 'Masuk') {
-      if (totalMinutes < 7 * 60 + 31) {
-        return 'Tepat Waktu';
-      }
-      if (totalMinutes <= 8 * 60) {
-        return 'Telat 1';
-      }
-      if (totalMinutes <= 12 * 60) {
-        return 'Telat 2';
-      }
-      return 'Telat 2 (Lewat 12:00)';
+      return totalMinutes < 7 * 60 + 31 ? 'Tepat Waktu' : 'Telat';
     }
 
     if (isoDay >= 1 && isoDay <= 4) {

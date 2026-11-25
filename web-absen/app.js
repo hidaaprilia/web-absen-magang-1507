@@ -32,7 +32,6 @@
   var el = {
     serverClock: document.getElementById('serverClock'),
     serverDate: document.getElementById('serverDate'),
-    clockSource: document.getElementById('clockSource'),
     connectionBanner: document.getElementById('connectionBanner'),
     installBar: document.getElementById('installBar'),
     installDesc: document.getElementById('installDesc'),
@@ -255,9 +254,6 @@
     var parts = clock.getWibParts();
     el.serverClock.textContent = parts.timeStr + ' WIB';
     el.serverDate.textContent = parts.hariNama + ', ' + parts.dateStr;
-    el.clockSource.textContent = clock.isSynced()
-      ? 'Sumber: Waktu Server Google'
-      : 'Sumber: Mode Preview Lokal';
   }
 
   function updateEstimatedStatus() {
