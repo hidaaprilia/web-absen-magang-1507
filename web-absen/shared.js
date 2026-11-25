@@ -8,7 +8,7 @@
   var STORAGE_DEVICE_ID = 'absen1507_device_id';
   var STORAGE_DEMO_PARTICIPANTS = 'absen1507_demo_participants';
   var STORAGE_DEMO_RECORDS = 'absen1507_demo_records';
-  var DEMO_PIN = '15072026';
+  var DEMO_PIN = 'PREVIEW';
 
   function readCookie(name) {
     var parts = document.cookie ? document.cookie.split('; ') : [];

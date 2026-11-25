@@ -96,7 +96,7 @@
     try {
       if (state.demoMode) {
         if (pin !== SHARED.DEMO_PIN) {
-          SHARED.setBanner(el.adminLoginError, 'danger', 'PIN salah (PIN preview default: 15072026).');
+          SHARED.setBanner(el.adminLoginError, 'danger', 'PIN salah (PIN mode preview lokal: PREVIEW).');
           return;
         }
       } else {
@@ -128,7 +128,7 @@
       return;
     }
 
-    var res = await SHARED.apiGet(state.apiUrl, {
+    var res = await SHARED.apiPost(state.apiUrl, {
       action: 'adminData',
       pin: state.adminPin,
       date: dateVal
@@ -403,6 +403,14 @@
     }
   }
 
+  function sanitizeCsvCell(v) {
+    var str = String(v == null ? '' : v);
+    if (/^[=+\-@\t\r]/.test(str)) {
+      str = "'" + str;
+    }
+    return '"' + str.replace(/"/g, '""') + '"';
+  }
+
   function exportAdminCsv() {
     var headers = ['Tanggal', 'Hari', 'ID_Peserta', 'Nama', 'Kategori', 'Posisi', 'Jenis_Absen', 'Jam_WIB', 'Status_Ketepatan', 'Kegiatan', 'Jarak_Meter', 'Akurasi_Meter', 'Status_GPS', 'Catatan_Anomali'];
     var lines = [headers.join(',')];
@@ -411,9 +419,7 @@
         r.tanggal, r.hari, r.idPeserta, r.nama, r.kategori, r.posisi,
         r.jenisAbsen, r.waktuWib, r.statusKetepatan, r.kegiatan,
         r.jarakMeter, r.akurasiMeter, r.statusGps, r.catatanAnomali
-      ].map(function (v) {
-        return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
-      });
+      ].map(sanitizeCsvCell);
       lines.push(row.join(','));
     });
 

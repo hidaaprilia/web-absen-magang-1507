@@ -1,4 +1,4 @@
-const CACHE_NAME = 'absen-1507-shell-v6';
+const CACHE_NAME = 'absen-1507-shell-v7';
 const SHELL_ASSETS = [
   '/',
   '/index.html',

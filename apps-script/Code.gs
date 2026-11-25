@@ -196,39 +196,65 @@ function doGet(e) {
       });
     }
 
-    if (action === 'adminData') {
-      const pin = String(params.pin || '').trim();
-      const cfg = getConfig_();
-      if (!pin || pin !== cfg.ADMIN_PIN) {
-        return jsonResponse_({ ok: false, error: 'PIN admin salah.' });
-      }
-      const dateFilter = String(params.date || '').trim();
-      const participants = getParticipants_(false).map(function (p) {
-        return {
-          id: p.id,
-          nama: p.nama,
-          kategori: p.kategori,
-          posisi: p.posisi,
-          aktif: p.aktif,
-          hasDevice: Boolean(p.deviceId),
-          deviceHint: p.deviceId ? '...' + p.deviceId.slice(-6) : '',
-          deviceBoundAt: p.deviceBoundAt || ''
-        };
-      });
-      const records = dateFilter ? getAttendanceByDate_(dateFilter) : getAllAttendance_();
-      return jsonResponse_({
-        ok: true,
-        serverTimestampMs: new Date().getTime(),
-        serverDateWib: formatDateWib_(new Date()),
-        participants: participants,
-        records: records
-      });
-    }
-
-    return jsonResponse_({ ok: false, error: 'Action tidak dikenal: ' + action });
+    return jsonResponse_({ ok: false, error: 'Action GET tidak dikenal: ' + action });
   } catch (err) {
     return jsonResponse_({ ok: false, error: err && err.message ? err.message : String(err) });
   }
+}
+
+function verifyAdminPinWithRateLimit_(pin) {
+  const cache = CacheService.getScriptCache();
+  const lockKey = 'admin_pin_lock';
+  const failKey = 'admin_pin_fails';
+  if (cache.get(lockKey)) {
+    return {
+      ok: false,
+      error: 'Terlalu banyak percobaan PIN salah. Tunggu 5 menit sebelum mencoba lagi.'
+    };
+  }
+  const cfg = getConfig_();
+  const inputPin = String(pin || '').trim();
+  if (!inputPin || inputPin !== cfg.ADMIN_PIN) {
+    const fails = Number(cache.get(failKey) || 0) + 1;
+    if (fails >= 5) {
+      cache.put(lockKey, '1', 300);
+      cache.remove(failKey);
+      return {
+        ok: false,
+        error: 'Terlalu banyak percobaan PIN salah (5x). Akses admin dikunci sementara 5 menit.'
+      };
+    }
+    cache.put(failKey, String(fails), 300);
+    return { ok: false, error: 'PIN admin salah.' };
+  }
+  cache.remove(failKey);
+  return { ok: true, error: null };
+}
+
+function handleAdminData_(body) {
+  const auth = verifyAdminPinWithRateLimit_(body.pin);
+  if (!auth.ok) return auth;
+  const dateFilter = String(body.date || '').trim();
+  const participants = getParticipants_(false).map(function (p) {
+    return {
+      id: p.id,
+      nama: p.nama,
+      kategori: p.kategori,
+      posisi: p.posisi,
+      aktif: p.aktif,
+      hasDevice: Boolean(p.deviceId),
+      deviceHint: p.deviceId ? '...' + p.deviceId.slice(-6) : '',
+      deviceBoundAt: p.deviceBoundAt || ''
+    };
+  });
+  const records = dateFilter ? getAttendanceByDate_(dateFilter) : getAllAttendance_();
+  return {
+    ok: true,
+    serverTimestampMs: new Date().getTime(),
+    serverDateWib: formatDateWib_(new Date()),
+    participants: participants,
+    records: records
+  };
 }
 
 function doPost(e) {
@@ -241,9 +267,10 @@ function doPost(e) {
       return jsonResponse_(handleSubmitAttendance_(body));
     }
     if (action === 'adminVerify') {
-      const cfg = getConfig_();
-      const valid = String(body.pin || '').trim() === cfg.ADMIN_PIN;
-      return jsonResponse_({ ok: valid, error: valid ? null : 'PIN admin salah.' });
+      return jsonResponse_(verifyAdminPinWithRateLimit_(body.pin));
+    }
+    if (action === 'adminData') {
+      return jsonResponse_(handleAdminData_(body));
     }
     if (action === 'addParticipant') {
       return jsonResponse_(handleAddParticipant_(body));
@@ -446,11 +473,8 @@ function handleAddParticipant_(body) {
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
-    const cfg = getConfig_();
-    const pin = String(body.pin || '').trim();
-    if (!pin || pin !== cfg.ADMIN_PIN) {
-      return { ok: false, error: 'PIN admin salah.' };
-    }
+    const auth = verifyAdminPinWithRateLimit_(body.pin);
+    if (!auth.ok) return auth;
 
     const nama = String(body.nama || '').trim();
     const kategori = String(body.kategori || '').trim();
@@ -499,11 +523,8 @@ function handleToggleParticipant_(body) {
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
-    const cfg = getConfig_();
-    const pin = String(body.pin || '').trim();
-    if (!pin || pin !== cfg.ADMIN_PIN) {
-      return { ok: false, error: 'PIN admin salah.' };
-    }
+    const auth = verifyAdminPinWithRateLimit_(body.pin);
+    if (!auth.ok) return auth;
     const id = String(body.id || '').trim();
     const aktif = body.aktif ? 'Ya' : 'Tidak';
 
@@ -526,11 +547,8 @@ function handleResetDevice_(body) {
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
-    const cfg = getConfig_();
-    const pin = String(body.pin || '').trim();
-    if (!pin || pin !== cfg.ADMIN_PIN) {
-      return { ok: false, error: 'PIN admin salah.' };
-    }
+    const auth = verifyAdminPinWithRateLimit_(body.pin);
+    if (!auth.ok) return auth;
     const id = String(body.id || '').trim();
     const ss = getSpreadsheet_();
     const sheet = ss.getSheetByName(SHEET_PESERTA);
