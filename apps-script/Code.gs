@@ -240,9 +240,10 @@ function handleSubmitAttendance_(body) {
     if (jenisAbsen !== 'Masuk' && jenisAbsen !== 'Pulang') {
       return { ok: false, error: 'Jenis absen harus Masuk atau Pulang.' };
     }
-    if (!kegiatan || kegiatan.length < 3) {
-      return { ok: false, error: 'Isian kegiatan hari ini wajib diisi minimal 3 karakter.' };
+    if (jenisAbsen === 'Pulang' && (!kegiatan || kegiatan.length < 3)) {
+      return { ok: false, error: 'Isian kegiatan hari ini wajib diisi minimal 3 karakter saat absen pulang.' };
     }
+    const recordedKegiatan = jenisAbsen === 'Masuk' ? (kegiatan || '-') : kegiatan;
     if (!isFinite(lat) || !isFinite(lng) || !isFinite(accuracy)) {
       return { ok: false, error: 'Data koordinat GPS tidak valid.' };
     }
@@ -319,7 +320,7 @@ function handleSubmitAttendance_(body) {
       jenisAbsen,
       evalResult.waktuWib,
       evalResult.statusKetepatan,
-      kegiatan,
+      recordedKegiatan,
       lat,
       lng,
       Number(distanceMeters.toFixed(2)),
@@ -342,7 +343,7 @@ function handleSubmitAttendance_(body) {
         jenisAbsen: jenisAbsen,
         waktuWib: evalResult.waktuWib,
         statusKetepatan: evalResult.statusKetepatan,
-        kegiatan: kegiatan,
+        kegiatan: recordedKegiatan,
         jarakMeter: Number(distanceMeters.toFixed(2)),
         akurasiMeter: Number(accuracy.toFixed(1)),
         statusGps: statusGps

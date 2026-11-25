@@ -212,8 +212,10 @@
         var masuk = pair.masuk;
         var pulang = pair.pulang;
         var kegiatanParts = [];
-        if (masuk && masuk.kegiatan) kegiatanParts.push('Masuk: ' + masuk.kegiatan);
-        if (pulang && pulang.kegiatan) kegiatanParts.push('Pulang: ' + pulang.kegiatan);
+        if (masuk && masuk.kegiatan && masuk.kegiatan !== 'Hadir (Absen Masuk)' && masuk.kegiatan !== '-') {
+          kegiatanParts.push('Masuk: ' + masuk.kegiatan);
+        }
+        if (pulang && pulang.kegiatan) kegiatanParts.push(pulang.kegiatan);
         var gpsNotes = [];
         if (masuk) gpsNotes.push('Masuk ' + masuk.jarakMeter + 'm (' + masuk.statusGps + ')');
         if (pulang) gpsNotes.push('Pulang ' + pulang.jarakMeter + 'm (' + pulang.statusGps + ')');

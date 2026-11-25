@@ -43,6 +43,7 @@
     cardMasuk: document.getElementById('cardMasuk'),
     cardPulang: document.getElementById('cardPulang'),
     estimatedStatusText: document.getElementById('estimatedStatusText'),
+    kegiatanField: document.getElementById('kegiatanField'),
     kegiatanInput: document.getElementById('kegiatanInput'),
     submitAbsenBtn: document.getElementById('submitAbsenBtn'),
     submitResultBox: document.getElementById('submitResultBox')
@@ -171,7 +172,11 @@
     });
     el.cardMasuk.classList.toggle('selected', jenis === 'Masuk');
     el.cardPulang.classList.toggle('selected', jenis === 'Pulang');
+    var isPulang = jenis === 'Pulang';
+    el.kegiatanField.classList.toggle('hidden', !isPulang);
+    el.kegiatanInput.required = isPulang;
     updateEstimatedStatus();
+    updateSubmitButton();
   }
 
   function getSelectedJenis() {
@@ -332,7 +337,8 @@
 
   function updateSubmitButton() {
     var hasParticipant = Boolean(el.participantSelect.value);
-    var hasKegiatan = el.kegiatanInput.value.trim().length >= 3;
+    var isPulang = getSelectedJenis() === 'Pulang';
+    var hasKegiatan = !isPulang || el.kegiatanInput.value.trim().length >= 3;
     var hasEnoughSamples = state.gpsSamples.length >= CFG.REQUIRED_GPS_SAMPLES;
     var gpsValid = Boolean(state.gpsAnalysis && state.gpsAnalysis.valid);
     var insideRadius =
@@ -353,11 +359,13 @@
     if (el.submitAbsenBtn.disabled) return;
 
     var latest = state.gpsAnalysis.latest;
+    var jenis = getSelectedJenis();
+    var kegiatanVal = jenis === 'Pulang' ? el.kegiatanInput.value.trim() : 'Hadir (Absen Masuk)';
     var payload = {
       action: 'submitAttendance',
       participantId: el.participantSelect.value,
-      jenisAbsen: getSelectedJenis(),
-      kegiatan: el.kegiatanInput.value.trim(),
+      jenisAbsen: jenis,
+      kegiatan: kegiatanVal,
       lat: latest.lat,
       lng: latest.lng,
       accuracy: latest.accuracy,
