@@ -13,6 +13,7 @@
 
   var state = {
     apiUrl: SHARED.getApiUrl(),
+    deviceId: SHARED.getOrCreateDeviceId(),
     demoMode: false,
     deferredInstallPrompt: null,
     geofence: {
@@ -68,7 +69,7 @@
     }
 
     try {
-      var data = await SHARED.apiGet(state.apiUrl, { action: 'init' });
+      var data = await SHARED.apiGet(state.apiUrl, { action: 'init', deviceId: state.deviceId });
       if (!data.ok) throw new Error(data.error || 'Gagal memuat data awal.');
 
       state.demoMode = false;
@@ -116,9 +117,19 @@
     state.demoMode = true;
     clock.markLocal();
     var demo = SHARED.loadDemoData();
-    state.participants = demo.participants.filter(function (p) {
-      return p.aktif !== false;
-    });
+    state.participants = demo.participants
+      .filter(function (p) { return p.aktif !== false; })
+      .map(function (p) {
+        return {
+          id: p.id,
+          nama: p.nama,
+          kategori: p.kategori,
+          posisi: p.posisi,
+          aktif: p.aktif,
+          hasDevice: Boolean(p.deviceId),
+          boundToThisDevice: Boolean(p.deviceId && p.deviceId === state.deviceId)
+        };
+      });
     var todayStr = clock.getWibParts().dateStr;
     var summary = {};
     demo.records
@@ -157,8 +168,25 @@
 
     if (hubGroup.children.length > 0) el.participantSelect.appendChild(hubGroup);
     if (smkGroup.children.length > 0) el.participantSelect.appendChild(smkGroup);
-    if (currentVal) el.participantSelect.value = currentVal;
+    if (currentVal) {
+      el.participantSelect.value = currentVal;
+    } else {
+      var bound = state.participants.find(function (p) { return p.boundToThisDevice; });
+      if (bound) el.participantSelect.value = bound.id;
+    }
     onParticipantChange();
+  }
+
+  function getDeviceBindingIssue(p) {
+    if (!p) return '';
+    var boundToThis = state.participants.find(function (item) { return item.boundToThisDevice; });
+    if (boundToThis && boundToThis.id !== p.id) {
+      return 'HP ini sudah terdaftar untuk ' + boundToThis.nama + '. Satu HP hanya untuk satu nama.';
+    }
+    if (p.hasDevice && !p.boundToThisDevice) {
+      return p.nama + ' sudah terkunci di perangkat lain. Hubungi Admin untuk Reset Perangkat.';
+    }
+    return '';
   }
 
   function onParticipantChange() {
@@ -178,13 +206,21 @@
       ? sum.pulang.waktuWib + ' (' + sum.pulang.statusKetepatan + ')'
       : 'Belum absen pulang';
 
+    var deviceIssue = getDeviceBindingIssue(p);
+    var deviceLine = p.boundToThisDevice
+      ? '<span class="badge badge-ok">Perangkat: Terdaftar di HP ini</span>'
+      : deviceIssue
+        ? '<span class="badge badge-danger">' + SHARED.escapeHtml(deviceIssue) + '</span>'
+        : '<span class="badge badge-neutral">Perangkat: Belum terikat (akan dikunci ke HP ini saat absen)</span>';
+
     el.participantInfoBox.innerHTML =
       '<div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:6px;">' +
       SHARED.categoryBadgeHtml(p.kategori) +
       '<strong>' + SHARED.escapeHtml(p.posisi || '-') + '</strong>' +
       '</div>' +
       '<div>Masuk hari ini: <strong>' + SHARED.escapeHtml(masukInfo) + '</strong></div>' +
-      '<div>Pulang hari ini: <strong>' + SHARED.escapeHtml(pulangInfo) + '</strong></div>';
+      '<div>Pulang hari ini: <strong>' + SHARED.escapeHtml(pulangInfo) + '</strong></div>' +
+      '<div style="margin-top:6px;">' + deviceLine + '</div>';
     el.participantInfoBox.classList.remove('hidden');
 
     if (!hasShortcutJenis) {
@@ -382,7 +418,11 @@
   }
 
   function updateSubmitButton() {
-    var hasParticipant = Boolean(el.participantSelect.value);
+    var selectedParticipant = state.participants.find(function (item) {
+      return item.id === el.participantSelect.value;
+    });
+    var hasParticipant = Boolean(selectedParticipant);
+    var deviceBlocked = Boolean(selectedParticipant && getDeviceBindingIssue(selectedParticipant));
     var isPulang = getSelectedJenis() === 'Pulang';
     var minChars = CFG.MIN_KEGIATAN_CHARS || 100;
     var charCount = updateKegiatanCharCount();
@@ -395,6 +435,7 @@
 
     el.submitAbsenBtn.disabled = !(
       hasParticipant &&
+      !deviceBlocked &&
       hasKegiatan &&
       hasEnoughSamples &&
       gpsValid &&
@@ -412,6 +453,7 @@
     var payload = {
       action: 'submitAttendance',
       participantId: el.participantSelect.value,
+      deviceId: state.deviceId,
       jenisAbsen: jenis,
       kegiatan: kegiatanVal,
       lat: latest.lat,
@@ -440,6 +482,14 @@
         }
         if (r.jenisAbsen === 'Masuk') state.todaySummary[r.idPeserta].masuk = r;
         if (r.jenisAbsen === 'Pulang') state.todaySummary[r.idPeserta].pulang = r;
+
+        state.participants = state.participants.map(function (p) {
+          if (p.id === r.idPeserta) {
+            p.hasDevice = true;
+            p.boundToThisDevice = true;
+          }
+          return p;
+        });
 
         SHARED.setBanner(
           el.submitResultBox,
@@ -485,6 +535,26 @@
     var demo = SHARED.loadDemoData();
     var participant = demo.participants.find(function (p) { return p.id === payload.participantId; });
     if (!participant) return { ok: false, error: 'Peserta tidak ditemukan.' };
+
+    var otherBound = demo.participants.find(function (p) {
+      return p.id !== participant.id && p.deviceId && p.deviceId === payload.deviceId;
+    });
+    if (otherBound) {
+      return {
+        ok: false,
+        error: 'Perangkat ini sudah terdaftar untuk ' + otherBound.nama + '. Satu HP hanya untuk satu peserta.'
+      };
+    }
+    if (participant.deviceId && participant.deviceId !== payload.deviceId) {
+      return {
+        ok: false,
+        error: participant.nama + ' sudah terkunci pada perangkat lain. Hubungi Admin untuk Reset Perangkat.'
+      };
+    }
+    if (!participant.deviceId) {
+      participant.deviceId = payload.deviceId;
+      SHARED.saveDemoParticipants(demo.participants);
+    }
 
     var todayRows = demo.records.filter(function (r) {
       return r.tanggal === parts.dateStr && r.idPeserta === participant.id;

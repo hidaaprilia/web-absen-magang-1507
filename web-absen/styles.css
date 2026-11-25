@@ -448,6 +448,11 @@ th {
   font-size: 0.88rem;
 }
 
+.participant-info-box .badge {
+  white-space: normal;
+  line-height: 1.35;
+}
+
 .install-bar {
   background: var(--surface);
   border: 1px solid #bfdbfe;

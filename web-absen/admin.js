@@ -259,14 +259,33 @@
     state.adminParticipants.forEach(function (p) {
       var tr = document.createElement('tr');
       var aktif = p.aktif !== false;
+      var hasDevice = Boolean(p.hasDevice || p.deviceId);
+      var deviceBadge = hasDevice
+        ? '<span class="badge badge-hub">Terkunci (' +
+          SHARED.escapeHtml(p.deviceHint || ('...' + String(p.deviceId).slice(-6))) +
+          ')</span>' +
+          (p.deviceBoundAt ? '<br><small>' + SHARED.escapeHtml(p.deviceBoundAt) + '</small>' : '')
+        : '<span class="badge badge-neutral">Belum terikat</span>';
+      var resetBtn = hasDevice
+        ? '<button type="button" class="btn btn-secondary reset-device-btn" data-id="' +
+          SHARED.escapeHtml(p.id) +
+          '" data-name="' +
+          SHARED.escapeHtml(p.nama) +
+          '">Reset Perangkat</button>'
+        : '';
+
       tr.innerHTML =
         '<td>' + SHARED.escapeHtml(p.id) + '</td>' +
         '<td><strong>' + SHARED.escapeHtml(p.nama) + '</strong></td>' +
         '<td>' + SHARED.categoryBadgeHtml(p.kategori) + '<br><small>' + SHARED.escapeHtml(p.posisi || '-') + '</small></td>' +
         '<td>' + (aktif ? '<span class="badge badge-ok">Aktif</span>' : '<span class="badge badge-neutral">Nonaktif</span>') + '</td>' +
-        '<td><button type="button" class="btn btn-secondary toggle-part-btn" data-id="' + SHARED.escapeHtml(p.id) + '" data-next="' + (!aktif) + '">' +
+        '<td>' + deviceBadge + '</td>' +
+        '<td><div style="display:flex; gap:6px; flex-wrap:wrap;">' +
+        '<button type="button" class="btn btn-secondary toggle-part-btn" data-id="' + SHARED.escapeHtml(p.id) + '" data-next="' + (!aktif) + '">' +
         (aktif ? 'Nonaktifkan' : 'Aktifkan') +
-        '</button></td>';
+        '</button>' +
+        resetBtn +
+        '</div></td>';
       el.participantsTableBody.appendChild(tr);
     });
   }
@@ -349,6 +368,41 @@
     }
   }
 
+  async function handleResetDevice(id, nama) {
+    if (!confirm('Reset kunci perangkat untuk ' + nama + '? Peserta bisa mendaftarkan HP baru saat absen berikutnya.')) {
+      return;
+    }
+    try {
+      if (state.demoMode) {
+        var demo = SHARED.loadDemoData();
+        demo.participants = demo.participants.map(function (p) {
+          if (p.id === id) {
+            p.deviceId = '';
+            p.deviceBoundAt = '';
+          }
+          return p;
+        });
+        SHARED.saveDemoParticipants(demo.participants);
+        state.adminParticipants = demo.participants;
+        renderAdminDashboard();
+        return;
+      }
+
+      var res = await SHARED.apiPost(state.apiUrl, {
+        action: 'resetDevice',
+        pin: state.adminPin,
+        id: id
+      });
+      if (!res.ok) {
+        alert(res.error || 'Gagal mereset perangkat.');
+        return;
+      }
+      await loadAdminData();
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
+  }
+
   function exportAdminCsv() {
     var headers = ['Tanggal', 'Hari', 'ID_Peserta', 'Nama', 'Kategori', 'Posisi', 'Jenis_Absen', 'Jam_WIB', 'Status_Ketepatan', 'Kegiatan', 'Jarak_Meter', 'Akurasi_Meter', 'Status_GPS', 'Catatan_Anomali'];
     var lines = [headers.join(',')];
@@ -386,9 +440,18 @@
   el.filterSearch.addEventListener('input', renderAdminDashboard);
   el.addParticipantForm.addEventListener('submit', handleAddParticipant);
   el.participantsTableBody.addEventListener('click', function (e) {
-    var btn = e.target.closest('.toggle-part-btn');
-    if (!btn) return;
-    handleToggleParticipant(btn.getAttribute('data-id'), btn.getAttribute('data-next') === 'true');
+    var toggleBtn = e.target.closest('.toggle-part-btn');
+    if (toggleBtn) {
+      handleToggleParticipant(
+        toggleBtn.getAttribute('data-id'),
+        toggleBtn.getAttribute('data-next') === 'true'
+      );
+      return;
+    }
+    var resetBtn = e.target.closest('.reset-device-btn');
+    if (resetBtn) {
+      handleResetDevice(resetBtn.getAttribute('data-id'), resetBtn.getAttribute('data-name') || 'peserta ini');
+    }
   });
   el.saveApiUrlBtn.addEventListener('click', function () {
     var url = el.apiUrlOverrideInput.value.trim();

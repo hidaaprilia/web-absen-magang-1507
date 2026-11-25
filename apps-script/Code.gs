@@ -59,12 +59,14 @@ function setupSpreadsheet() {
     sheetPeserta = ss.insertSheet(SHEET_PESERTA);
   }
   if (sheetPeserta.getLastRow() === 0) {
-    sheetPeserta.appendRow(['ID', 'Nama', 'Kategori', 'Posisi_Jurusan', 'Aktif', 'Ditambahkan_Pada']);
-    sheetPeserta.getRange(1, 1, 1, 6).setFontWeight('bold').setBackground('#e8eef7');
+    sheetPeserta.appendRow(['ID', 'Nama', 'Kategori', 'Posisi_Jurusan', 'Aktif', 'Ditambahkan_Pada', 'Device_ID', 'Device_Bound_At']);
+    sheetPeserta.getRange(1, 1, 1, 8).setFontWeight('bold').setBackground('#e8eef7');
     INITIAL_PARTICIPANTS.forEach(function (p) {
-      sheetPeserta.appendRow([p.id, p.nama, p.kategori, p.posisi, 'Ya', nowStr]);
+      sheetPeserta.appendRow([p.id, p.nama, p.kategori, p.posisi, 'Ya', nowStr, '', '']);
     });
     sheetPeserta.setFrozenRows(1);
+  } else {
+    ensureParticipantDeviceColumns_(sheetPeserta);
   }
 
   // 2. Sheet Absensi
@@ -91,10 +93,13 @@ function setupSpreadsheet() {
       'Akurasi_GPS_Meter',
       'Status_GPS',
       'Catatan_Anomali',
-      'Perangkat'
+      'Perangkat',
+      'Device_ID'
     ]);
-    sheetAbsensi.getRange(1, 1, 1, 18).setFontWeight('bold').setBackground('#e8eef7');
+    sheetAbsensi.getRange(1, 1, 1, 19).setFontWeight('bold').setBackground('#e8eef7');
     sheetAbsensi.setFrozenRows(1);
+  } else {
+    ensureAttendanceDeviceColumn_(sheetAbsensi);
   }
 
   // 3. Sheet Pengaturan
@@ -160,7 +165,18 @@ function doGet(e) {
     if (action === 'init' || action === 'time') {
       const now = new Date();
       const cfg = getConfig_();
-      const participants = getParticipants_(true);
+      const reqDeviceId = String(params.deviceId || '').trim();
+      const participants = getParticipants_(true).map(function (p) {
+        return {
+          id: p.id,
+          nama: p.nama,
+          kategori: p.kategori,
+          posisi: p.posisi,
+          aktif: p.aktif,
+          hasDevice: Boolean(p.deviceId),
+          boundToThisDevice: Boolean(p.deviceId && reqDeviceId && p.deviceId === reqDeviceId)
+        };
+      });
       const todayWib = formatDateWib_(now);
       const todayRecords = getAttendanceByDate_(todayWib);
 
@@ -187,7 +203,18 @@ function doGet(e) {
         return jsonResponse_({ ok: false, error: 'PIN admin salah.' });
       }
       const dateFilter = String(params.date || '').trim();
-      const participants = getParticipants_(false);
+      const participants = getParticipants_(false).map(function (p) {
+        return {
+          id: p.id,
+          nama: p.nama,
+          kategori: p.kategori,
+          posisi: p.posisi,
+          aktif: p.aktif,
+          hasDevice: Boolean(p.deviceId),
+          deviceHint: p.deviceId ? '...' + p.deviceId.slice(-6) : '',
+          deviceBoundAt: p.deviceBoundAt || ''
+        };
+      });
       const records = dateFilter ? getAttendanceByDate_(dateFilter) : getAllAttendance_();
       return jsonResponse_({
         ok: true,
@@ -224,6 +251,9 @@ function doPost(e) {
     if (action === 'toggleParticipant') {
       return jsonResponse_(handleToggleParticipant_(body));
     }
+    if (action === 'resetDevice') {
+      return jsonResponse_(handleResetDevice_(body));
+    }
 
     return jsonResponse_({ ok: false, error: 'Action POST tidak dikenal: ' + action });
   } catch (err) {
@@ -247,8 +277,12 @@ function handleSubmitAttendance_(body) {
     const suspectFlags = Array.isArray(body.suspectFlags) ? body.suspectFlags.map(String) : [];
     const blockReason = String(body.blockReason || '').trim();
     const userAgent = String(body.userAgent || '').slice(0, 180);
+    const deviceId = String(body.deviceId || '').trim().slice(0, 128);
 
     if (!participantId) return { ok: false, error: 'Peserta wajib dipilih.' };
+    if (!deviceId || deviceId.length < 8) {
+      return { ok: false, error: 'ID perangkat tidak valid. Muat ulang halaman dan coba lagi.' };
+    }
     if (jenisAbsen !== 'Masuk' && jenisAbsen !== 'Pulang') {
       return { ok: false, error: 'Jenis absen harus Masuk atau Pulang.' };
     }
@@ -297,11 +331,33 @@ function handleSubmitAttendance_(body) {
       };
     }
 
-    // Cari peserta aktif
-    const participants = getParticipants_(true);
-    const participant = participants.find(function (p) { return p.id === participantId; });
+    // Cari peserta aktif & cek Device Binding (1 HP untuk 1 Nama)
+    const allParticipants = getParticipants_(false);
+    const participant = allParticipants.find(function (p) { return p.id === participantId && p.aktif; });
     if (!participant) {
       return { ok: false, error: 'Peserta tidak ditemukan atau sudah dinonaktifkan.' };
+    }
+
+    const otherWithSameDevice = allParticipants.find(function (p) {
+      return p.id !== participant.id && p.deviceId && p.deviceId === deviceId;
+    });
+    if (otherWithSameDevice) {
+      return {
+        ok: false,
+        error:
+          'Perangkat ini sudah terdaftar untuk ' +
+          otherWithSameDevice.nama +
+          '. Satu HP hanya bisa digunakan oleh satu peserta.'
+      };
+    }
+
+    if (participant.deviceId && participant.deviceId !== deviceId) {
+      return {
+        ok: false,
+        error:
+          participant.nama +
+          ' sudah terkunci pada perangkat lain. Hubungi Admin untuk Reset Perangkat jika ganti HP.'
+      };
     }
 
     // Cek duplikasi absen hari ini
@@ -331,7 +387,15 @@ function handleSubmitAttendance_(body) {
     const idAbsen = 'ABS-' + Utilities.formatDate(now, TIMEZONE, 'yyyyMMdd-HHmmss') + '-' + participant.id;
 
     const ss = getSpreadsheet_();
+    if (!participant.deviceId) {
+      const sheetPeserta = ss.getSheetByName(SHEET_PESERTA);
+      ensureParticipantDeviceColumns_(sheetPeserta);
+      sheetPeserta.getRange(participant.rowIndex, 7).setValue(deviceId);
+      sheetPeserta.getRange(participant.rowIndex, 8).setValue(formatDateTimeWib_(now));
+    }
+
     const sheetAbsensi = ss.getSheetByName(SHEET_ABSENSI);
+    ensureAttendanceDeviceColumn_(sheetAbsensi);
     sheetAbsensi.appendRow([
       idAbsen,
       todayWib,
@@ -350,7 +414,8 @@ function handleSubmitAttendance_(body) {
       Number(accuracy.toFixed(1)),
       statusGps,
       catatanAnomali,
-      userAgent
+      userAgent,
+      deviceId
     ]);
 
     return {
@@ -412,7 +477,8 @@ function handleAddParticipant_(body) {
 
     const ss = getSpreadsheet_();
     const sheet = ss.getSheetByName(SHEET_PESERTA);
-    sheet.appendRow([newId, nama, kategori, posisi, 'Ya', nowStr]);
+    ensureParticipantDeviceColumns_(sheet);
+    sheet.appendRow([newId, nama, kategori, posisi, 'Ya', nowStr, '', '']);
 
     return {
       ok: true,
@@ -453,6 +519,53 @@ function handleToggleParticipant_(body) {
     return { ok: false, error: 'ID peserta tidak ditemukan.' };
   } finally {
     lock.releaseLock();
+  }
+}
+
+function handleResetDevice_(body) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const cfg = getConfig_();
+    const pin = String(body.pin || '').trim();
+    if (!pin || pin !== cfg.ADMIN_PIN) {
+      return { ok: false, error: 'PIN admin salah.' };
+    }
+    const id = String(body.id || '').trim();
+    const ss = getSpreadsheet_();
+    const sheet = ss.getSheetByName(SHEET_PESERTA);
+    ensureParticipantDeviceColumns_(sheet);
+    const values = sheet.getDataRange().getValues();
+    for (let i = 1; i < values.length; i++) {
+      if (String(values[i][0]).trim() === id) {
+        sheet.getRange(i + 1, 7).setValue('');
+        sheet.getRange(i + 1, 8).setValue('');
+        return { ok: true, id: id };
+      }
+    }
+    return { ok: false, error: 'ID peserta tidak ditemukan.' };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function ensureParticipantDeviceColumns_(sheet) {
+  if (!sheet || sheet.getLastRow() === 0) return;
+  const h7 = String(sheet.getRange(1, 7).getValue() || '').trim();
+  const h8 = String(sheet.getRange(1, 8).getValue() || '').trim();
+  if (!h7) {
+    sheet.getRange(1, 7).setValue('Device_ID').setFontWeight('bold').setBackground('#e8eef7');
+  }
+  if (!h8) {
+    sheet.getRange(1, 8).setValue('Device_Bound_At').setFontWeight('bold').setBackground('#e8eef7');
+  }
+}
+
+function ensureAttendanceDeviceColumn_(sheet) {
+  if (!sheet || sheet.getLastRow() === 0) return;
+  const h19 = String(sheet.getRange(1, 19).getValue() || '').trim();
+  if (!h19) {
+    sheet.getRange(1, 19).setValue('Device_ID').setFontWeight('bold').setBackground('#e8eef7');
   }
 }
 
@@ -523,6 +636,7 @@ function getParticipants_(onlyActive) {
     setupSpreadsheet();
     sheet = ss.getSheetByName(SHEET_PESERTA);
   }
+  ensureParticipantDeviceColumns_(sheet);
   const rows = sheet.getDataRange().getValues();
   const list = [];
   for (let i = 1; i < rows.length; i++) {
@@ -532,9 +646,20 @@ function getParticipants_(onlyActive) {
     const posisi = String(rows[i][3] || '').trim();
     const aktifStr = String(rows[i][4] || 'Ya').trim().toLowerCase();
     const aktif = aktifStr === 'ya' || aktifStr === 'true' || aktifStr === '1';
+    const deviceId = String(rows[i][6] || '').trim();
+    const deviceBoundAt = formatCellDateTime_(rows[i][7]);
     if (!id || !nama) continue;
     if (onlyActive && !aktif) continue;
-    list.push({ id: id, nama: nama, kategori: kategori, posisi: posisi, aktif: aktif });
+    list.push({
+      id: id,
+      nama: nama,
+      kategori: kategori,
+      posisi: posisi,
+      aktif: aktif,
+      deviceId: deviceId,
+      deviceBoundAt: deviceBoundAt,
+      rowIndex: i + 1
+    });
   }
   return list;
 }
@@ -612,6 +737,13 @@ function formatCellDate_(val) {
 function formatCellTime_(val) {
   if (val instanceof Date) {
     return Utilities.formatDate(val, TIMEZONE, 'HH:mm:ss');
+  }
+  return String(val || '').trim();
+}
+
+function formatCellDateTime_(val) {
+  if (val instanceof Date) {
+    return Utilities.formatDate(val, TIMEZONE, 'yyyy-MM-dd HH:mm:ss');
   }
   return String(val || '').trim();
 }
