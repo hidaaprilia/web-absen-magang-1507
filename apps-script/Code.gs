@@ -340,12 +340,21 @@ function handleSubmitAttendance_(body) {
     if (blockReason) {
       return { ok: false, error: 'Validasi GPS ditolak: ' + blockReason };
     }
+    if (suspectFlags.length > 0) {
+      return {
+        ok: false,
+        error: 'Indikasi GPS tidak biasa terdeteksi (' + suspectFlags.join(', ') + '). Absensi tidak dapat dikirim.'
+      };
+    }
 
     // Validasi timestamp GPS terhadap waktu server (mencegah cache / manipulasi timestamp jauh)
     if (gpsTimestampMs > 0) {
       const driftSec = Math.abs(now.getTime() - gpsTimestampMs) / 1000;
       if (driftSec > 180) {
-        suspectFlags.push('Selisih waktu GPS vs server ' + Math.round(driftSec) + ' dtk');
+        return {
+          ok: false,
+          error: 'Indikasi GPS tidak biasa terdeteksi (selisih waktu GPS vs server ' + Math.round(driftSec) + ' detik). Absensi tidak dapat dikirim.'
+        };
       }
     }
 

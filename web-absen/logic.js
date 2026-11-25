@@ -148,6 +148,12 @@
       var driftSec = Math.abs(serverNowMs - latest.timestamp) / 1000;
       if (driftSec > 180) {
         suspectFlags.push('Timestamp-Drift-' + Math.round(driftSec) + 's');
+        if (!blockReason) {
+          blockReason =
+            'Indikasi GPS tidak biasa terdeteksi (selisih waktu GPS vs server ' +
+            Math.round(driftSec) +
+            ' detik). Pastikan tidak memakai Fake GPS lalu segarkan lokasi.';
+        }
       }
     }
 
@@ -176,11 +182,15 @@
 
       if (samples.length >= 3 && identicalCount === samples.length - 1 && Number.isInteger(latest.accuracy)) {
         suspectFlags.push('Static-Coords-Round-Accuracy');
+        if (!blockReason) {
+          blockReason =
+            'Indikasi GPS tidak biasa terdeteksi (koordinat statis identik). Pastikan tidak memakai Fake GPS lalu tekan Segarkan Lokasi GPS.';
+        }
       }
     }
 
     return {
-      valid: !blockReason,
+      valid: !blockReason && suspectFlags.length === 0,
       blockReason: blockReason,
       suspectFlags: suspectFlags,
       latest: latest

@@ -385,13 +385,13 @@
 
     if (analysis.suspectFlags.length > 0) {
       el.gpsStatusBadge.innerHTML =
-        '<span class="badge badge-warn">Dalam radius (Ada catatan anomali GPS)</span>';
+        '<span class="badge badge-danger">GPS Ditolak (Indikasi Anomali)</span>';
       SHARED.setBanner(
         el.gpsWarningBox,
-        'warn',
+        'danger',
         'Indikasi GPS tidak biasa terdeteksi (' +
           analysis.suspectFlags.join(', ') +
-          ') dan akan dicatat untuk tinjauan admin.'
+          '). Absensi diblokir; pastikan tidak memakai Fake GPS lalu tekan Segarkan Lokasi GPS.'
       );
     } else {
       el.gpsStatusBadge.innerHTML =
@@ -428,7 +428,11 @@
     var charCount = updateKegiatanCharCount();
     var hasKegiatan = !isPulang || charCount >= minChars;
     var hasEnoughSamples = state.gpsSamples.length >= CFG.REQUIRED_GPS_SAMPLES;
-    var gpsValid = Boolean(state.gpsAnalysis && state.gpsAnalysis.valid);
+    var gpsValid = Boolean(
+      state.gpsAnalysis &&
+        state.gpsAnalysis.valid &&
+        state.gpsAnalysis.suspectFlags.length === 0
+    );
     var insideRadius =
       typeof state.currentDistance === 'number' &&
       state.currentDistance <= state.geofence.maxDistanceMeters;
