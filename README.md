@@ -3,9 +3,12 @@
 Aplikasi web presensi peserta magang (`MagangHub` dan `Magang SMK`) dengan validasi radius lokasi **15 meter**, sinkronisasi **waktu server WIB**, deteksi anomali GPS, dan database **Google Spreadsheet** via **Google Apps Script**.
 
 ## Struktur Folder
-- `web-absen/` — Frontend statis (`index.html`, `app.js`, `logic.js`, `styles.css`, `config.js`, `vercel.json`)
+- `web-absen/` — Frontend statis:
+  - `index.html` (`/`) — Halaman khusus Form Absensi Peserta (tanpa tautan ke admin)
+  - `admin.html` (`/admin`) — Halaman terpisah Panel Admin (login PIN)
+  - `app.js`, `admin.js`, `shared.js`, `logic.js`, `styles.css`, `config.js`, `vercel.json`
 - `apps-script/Code.gs` — Backend Google Apps Script untuk spreadsheet `1507_Presensi Magang`
-- `vercel.json` — Konfigurasi root agar Vercel otomatis menyajikan folder `web-absen`
+- `vercel.json` — Konfigurasi root agar Vercel otomatis menyajikan folder `web-absen` (`cleanUrls: true`)
 
 ## Pengaturan Cepat
 1. Buka Google Spreadsheet `1507_Presensi Magang` -> **Ekstensi** -> **Apps Script**.
