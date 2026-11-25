@@ -72,7 +72,29 @@
 
       state.demoMode = false;
       clock.syncFromServer(data.serverTimestampMs);
-      if (data.geofence) state.geofence = data.geofence;
+      if (data.geofence) {
+        if (
+          typeof data.geofence.lat === 'number' &&
+          typeof data.geofence.lng === 'number' &&
+          isFinite(data.geofence.lat) &&
+          isFinite(data.geofence.lng) &&
+          Math.abs(data.geofence.lat) <= 90 &&
+          Math.abs(data.geofence.lng) <= 180
+        ) {
+          state.geofence.lat = data.geofence.lat;
+          state.geofence.lng = data.geofence.lng;
+        }
+        if (
+          typeof data.geofence.maxDistanceMeters === 'number' &&
+          isFinite(data.geofence.maxDistanceMeters) &&
+          data.geofence.maxDistanceMeters > 0
+        ) {
+          state.geofence.maxDistanceMeters = Math.max(
+            CFG.MAX_DISTANCE_METERS,
+            data.geofence.maxDistanceMeters
+          );
+        }
+      }
       state.participants = data.participants || [];
       state.todaySummary = data.todaySummary || {};
 

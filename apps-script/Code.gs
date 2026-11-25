@@ -17,7 +17,7 @@ const SPREADSHEET_ID = '1t4_29ie6hc3hjryDlpcKr9Rb6uYDaF8ZZsVft--Sifo';
 const TIMEZONE = 'Asia/Jakarta';
 const TARGET_LAT = -0.8423974510439358;
 const TARGET_LNG = 103.43806729772506;
-const MAX_DISTANCE_METERS = 15;
+const MAX_DISTANCE_METERS = 20;
 const MAX_GPS_ACCURACY_METERS = 50;
 const DEFAULT_ADMIN_PIN = '15072026';
 
@@ -105,13 +105,21 @@ function setupSpreadsheet() {
     sheetPengaturan.appendRow(['Kunci', 'Nilai', 'Keterangan']);
     sheetPengaturan.getRange(1, 1, 1, 3).setFontWeight('bold').setBackground('#e8eef7');
     sheetPengaturan.appendRow(['ADMIN_PIN', DEFAULT_ADMIN_PIN, 'PIN untuk login Panel Admin (ubah di sini)']);
-    sheetPengaturan.appendRow(['TARGET_LAT', String(TARGET_LAT), 'Latitude titik acuan absensi']);
-    sheetPengaturan.appendRow(['TARGET_LNG', String(TARGET_LNG), 'Longitude titik acuan absensi']);
-    sheetPengaturan.appendRow(['MAX_DISTANCE_METERS', String(MAX_DISTANCE_METERS), 'Batas jarak maksimal absensi (meter)']);
+    sheetPengaturan.appendRow(['TARGET_LAT', TARGET_LAT, 'Latitude titik acuan absensi']);
+    sheetPengaturan.appendRow(['TARGET_LNG', TARGET_LNG, 'Longitude titik acuan absensi']);
+    sheetPengaturan.appendRow(['MAX_DISTANCE_METERS', MAX_DISTANCE_METERS, 'Batas jarak maksimal absensi (meter)']);
     sheetPengaturan.setFrozenRows(1);
   }
 
   return { ok: true, message: 'Setup spreadsheet selesai.' };
+}
+
+function parseConfigNumber_(rawVal, minVal, maxVal, fallback) {
+  let num = typeof rawVal === 'number' ? rawVal : Number(String(rawVal || '').trim().replace(',', '.'));
+  if (!isFinite(num) || num < minVal || num > maxVal) {
+    return fallback;
+  }
+  return num;
 }
 
 function getConfig_() {
@@ -130,12 +138,15 @@ function getConfig_() {
   };
   for (let i = 1; i < rows.length; i++) {
     const key = String(rows[i][0] || '').trim();
-    const val = String(rows[i][1] || '').trim();
+    const rawVal = rows[i][1];
+    const val = String(rawVal == null ? '' : rawVal).trim();
     if (!key || !val) continue;
     if (key === 'ADMIN_PIN') cfg.ADMIN_PIN = val;
-    if (key === 'TARGET_LAT') cfg.TARGET_LAT = Number(val) || TARGET_LAT;
-    if (key === 'TARGET_LNG') cfg.TARGET_LNG = Number(val) || TARGET_LNG;
-    if (key === 'MAX_DISTANCE_METERS') cfg.MAX_DISTANCE_METERS = Number(val) || MAX_DISTANCE_METERS;
+    if (key === 'TARGET_LAT') cfg.TARGET_LAT = parseConfigNumber_(rawVal, -90, 90, TARGET_LAT);
+    if (key === 'TARGET_LNG') cfg.TARGET_LNG = parseConfigNumber_(rawVal, -180, 180, TARGET_LNG);
+    if (key === 'MAX_DISTANCE_METERS') {
+      cfg.MAX_DISTANCE_METERS = parseConfigNumber_(rawVal, 1, 5000, MAX_DISTANCE_METERS);
+    }
   }
   return cfg;
 }

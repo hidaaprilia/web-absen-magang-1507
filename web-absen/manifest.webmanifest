@@ -1,7 +1,7 @@
 {
   "name": "Absensi Peserta Magang 1507",
   "short_name": "Absen 1507",
-  "description": "Aplikasi presensi peserta magang dengan validasi lokasi 15 meter dan waktu server WIB.",
+  "description": "Aplikasi presensi peserta magang dengan validasi lokasi 20 meter dan waktu server WIB.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
